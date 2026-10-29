@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
-import {Ronin} from "@components/Icons/Ronin";
+import { Ronin } from '@components/Icons/Ronin';
 import { Connector, ConnectorType } from '@contexts/Web3Context';
 import { getShortAddress } from '@helpers/address';
 import { getLedgerAddresses } from '@helpers/Ledger';
+import { OATH_WALLET } from '@helpers/oathWallet';
 import { TERMS_URL } from '@helpers/urls';
 import useDisableScroll from '@hooks/useDisableScroll';
 import useOnClickOutside from '@hooks/useOnClickOutside';
@@ -167,6 +168,37 @@ const ConnectWalletModal = ({ isOpen = false, onRequestClose, onSelectConnector 
                 </div>
                 {isLedgerAvailable ? <ArrowRight /> : null}
               </div>
+              {!/Android/i.test(navigator.userAgent) && (
+                <div
+                  className="connect-wallet-item"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Connect Oath Wallet"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onSelectConnector([ConnectorType.Oath]);
+                      onClose();
+                    }
+                  }}
+                  onClick={() => {
+                    onSelectConnector([ConnectorType.Oath]);
+                    onClose();
+                  }}
+                >
+                  <img
+                    src={OATH_WALLET.image_url}
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="connect-wallet-item__symbol"
+                  />
+                  <div className="connect-wallet-item__info">
+                    <div className="heading heading--emphasized">Oath Wallet</div>
+                  </div>
+                  <ArrowRight />
+                </div>
+              )}
               <div
                 className="connect-wallet-item"
                 onClick={() => {

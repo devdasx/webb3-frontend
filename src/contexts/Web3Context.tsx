@@ -33,7 +33,7 @@ export const Web3Context = createContext<Web3 | undefined>(undefined);
 export function useWriteProvider(
   writeConnector: WagmiConnector | undefined,
   isConnected: boolean,
-  ethersProvider: JsonRpcProvider | undefined
+  ethersProvider: JsonRpcProvider | undefined,
 ) {
   const [provider, setProvider] = useState<JsonRpcProvider | EthersWeb3Provider | undefined>(undefined);
   const { data: connectorClient } = useConnectorClient();
@@ -70,6 +70,7 @@ export function useWeb3Context() {
 export enum ConnectorType {
   Metamask = 'Metamask',
   WalletConnect = 'WalletConnect',
+  Oath = 'Oath',
   WalletLink = 'WalletLink',
   Ledger = 'Ledger',
   Ronin = 'Ronin',
@@ -78,6 +79,7 @@ export enum ConnectorType {
 export type Connector =
   | [ConnectorType.Metamask]
   | [ConnectorType.WalletConnect]
+  | [ConnectorType.Oath]
   | [ConnectorType.WalletLink]
   | [ConnectorType.Ledger, [string, string]]
   | [ConnectorType.Ronin];
@@ -115,6 +117,7 @@ type Web3ProviderProps = {
 
 const connectorsMap = {
   [ConnectorType.Metamask]: { id: 'injected' },
+  [ConnectorType.Oath]: { id: 'oath-wallet' },
   [ConnectorType.WalletConnect]: { id: 'walletConnect', options: { projectId: WALLECT_CONNECT_PROJECT_ID } },
   [ConnectorType.WalletLink]: { id: 'coinbaseWalletSDK' },
   [ConnectorType.Ledger]: { id: 'ledger' },
@@ -129,7 +132,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
   const [readChainId, setReadChainId] = useState<number>(DEFAULT_MARKET.chainInformation.chainId);
 
   const { address: account, chainId: writeChainId, connector: writeConnector, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect, connectAsync, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
 
@@ -165,7 +168,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
         const storedConnectorType = JSON.parse(storedConnectorString)[0];
         const storedConnector = [storedConnectorType] as Connector;
 
-        if (storedConnector[0] !== connector?.[0]) {
+        // Wagmi restores approved Oath sessions. Never reopen a QR prompt on page load.
+        if (storedConnector[0] !== ConnectorType.Oath && storedConnector[0] !== connector?.[0]) {
           connectWallet(storedConnector);
         }
       } catch (error) {
@@ -220,7 +224,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
             } else {
               console.warn(
                 'writeWeb3.provider is not a JsonRpcProvider instance. Cannot add new network.',
-                writeWeb3.provider
+                writeWeb3.provider,
               );
             }
             return true;
@@ -237,11 +241,23 @@ export const Web3Provider = ({ children }: Web3ProviderProps) => {
       }
       return true;
     },
-    [writeWeb3.provider, writeWeb3.chainId]
+    [writeWeb3.provider, writeWeb3.chainId],
   );
 
   // Create function to connect to a specific wallet type
   const connectWallet = async (newConnector: Connector) => {
+    if (newConnector[0] === ConnectorType.Oath) {
+      const oath = connectors.find((item) => item.id === 'oath-wallet');
+      if (!oath) return;
+      try {
+        await connectAsync({ connector: oath });
+        setConnector(newConnector);
+      } catch {
+        // WalletConnect displays errors and treats closing its dialog as cancellation.
+        // Keep the previous wallet selection when no new session was approved.
+      }
+      return;
+    }
     if (newConnector !== connector) {
       setConnector(newConnector);
       const [connectorType] = newConnector;

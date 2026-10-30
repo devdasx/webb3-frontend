@@ -34,6 +34,9 @@ function setup() {
   const base = {
     id: 'walletConnect',
     name: 'WalletConnect',
+    get requestedChainsStorageKey() {
+      return `${this.id}.requestedChains`;
+    },
     getProvider: jest.fn().mockResolvedValue(provider),
     connect: jest.fn().mockResolvedValue(result),
     disconnect: jest.fn().mockResolvedValue(undefined),
@@ -59,6 +62,8 @@ test('uses an isolated named connector and only supported Compound mainnets', ()
   expect(connector.id).toBe('oath-wallet');
   expect(connector.name).toBe('Oath Wallet');
   expect(base.id).toBe('walletConnect');
+  expect(base.requestedChainsStorageKey).toBe('walletConnect.requestedChains');
+  expect(connector.requestedChainsStorageKey).toBe('oath-wallet.requestedChains');
   expect(factory.mock.calls[0][0].chains.map((chain: { id: number }) => chain.id)).toEqual([1, 8453]);
   expect(walletConnect).toHaveBeenCalledWith(
     expect.objectContaining({ customStoragePrefix: 'compound-oath', logger: 'silent', telemetryEnabled: false }),

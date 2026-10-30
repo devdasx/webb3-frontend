@@ -72,6 +72,8 @@ export function oathWallet({ projectId }: { projectId: string }) {
     const base = factory({ ...config, chains: [chains[0], ...chains.slice(1)] });
     const connector: ReturnType<typeof factory> = {
       ...base,
+      // Spreading the base materializes its getter before our id override.
+      requestedChainsStorageKey: `${OATH_WALLET.id}.requestedChains`,
       id: OATH_WALLET.id,
       name: OATH_WALLET.name,
       icon: oathLogo,

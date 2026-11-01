@@ -37,7 +37,8 @@ export function presentOathWallet({
       if (open) showOath();
     }),
     RouterController.subscribeKey('view', (view) => {
-      if (view === 'ConnectingWalletConnectBasic') showOath();
+      // Reopening an already-open modal changes only the route.
+      if (view === 'ConnectingWalletConnectBasic' || view === 'AllWallets') showOath();
     }),
   ];
   return () => {

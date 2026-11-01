@@ -73,42 +73,45 @@ test('uses an isolated named connector and only supported Compound mainnets', ()
   expect(OATH_CHAIN_IDS).not.toContain(11155111);
 });
 
-test('routes directly to the Oath connection screen, then removes both subscriptions', () => {
-  let opened: (open: boolean) => void = () => undefined;
-  let viewChanged: (view: string) => void = () => undefined;
-  const first = jest.fn(),
-    second = jest.fn(),
-    reset = jest.fn(),
-    resetUri = jest.fn();
-  const controllers = {
-    ModalController: {
-      state: { open: true },
-      subscribeKey: (_key: string, cb: typeof opened) => {
-        opened = cb;
-        return first;
+test.each(['ConnectingWalletConnectBasic', 'AllWallets'])(
+  'routes directly to Oath when the SDK selects %s, then removes both subscriptions',
+  (genericView) => {
+    let opened: (open: boolean) => void = () => undefined;
+    let viewChanged: (view: string) => void = () => undefined;
+    const first = jest.fn(),
+      second = jest.fn(),
+      reset = jest.fn(),
+      resetUri = jest.fn();
+    const controllers = {
+      ModalController: {
+        state: { open: true },
+        subscribeKey: (_key: string, cb: typeof opened) => {
+          opened = cb;
+          return first;
+        },
       },
-    },
-    RouterController: {
-      reset,
-      subscribeKey: (_key: string, cb: typeof viewChanged) => {
-        viewChanged = cb;
-        return second;
+      RouterController: {
+        reset,
+        subscribeKey: (_key: string, cb: typeof viewChanged) => {
+          viewChanged = cb;
+          return second;
+        },
       },
-    },
-    ConnectionController: { resetUri },
-    SnackController: { hide: jest.fn() },
-  };
-  const dispose = presentOathWallet(controllers as unknown as Parameters<typeof presentOathWallet>[0]);
-  opened(true);
-  viewChanged('ConnectingWalletConnectBasic');
-  expect(reset).toHaveBeenCalledTimes(2);
-  expect(reset).toHaveBeenLastCalledWith('ConnectingWalletConnect', { wallet: OATH_WALLET });
-  dispose();
-  expect(first).toHaveBeenCalledTimes(1);
-  expect(second).toHaveBeenCalledTimes(1);
-  expect(reset).toHaveBeenLastCalledWith('Connect');
-  expect(resetUri).toHaveBeenCalledTimes(2);
-});
+      ConnectionController: { resetUri },
+      SnackController: { hide: jest.fn() },
+    };
+    const dispose = presentOathWallet(controllers as unknown as Parameters<typeof presentOathWallet>[0]);
+    opened(true);
+    viewChanged(genericView);
+    expect(reset).toHaveBeenCalledTimes(2);
+    expect(reset).toHaveBeenLastCalledWith('ConnectingWalletConnect', { wallet: OATH_WALLET });
+    dispose();
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(reset).toHaveBeenLastCalledWith('Connect');
+    expect(resetUri).toHaveBeenCalledTimes(2);
+  },
+);
 
 test('returns the SDK connection result without changing account or chain data', async () => {
   const { connector, base, result } = setup();
